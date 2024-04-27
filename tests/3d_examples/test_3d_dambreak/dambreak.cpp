@@ -25,6 +25,12 @@ Real T_top_x = 0.0;
 Real T_top_z = 0.0;
 Real S_top_x = 0.0;
 Real S_top_z = 0.0;
+Real A_front_z = 0.0;
+Real A_front_y = 0.0;
+Real T_front_z = 0.0;
+Real T_front_y = 0.0;
+Real S_front_z = 0.0;
+Real S_front_y = 0.0;
 std::default_random_engine generator;
 std::normal_distribution<Real> distribution(0.0, dx / 10.0);
 
@@ -36,15 +42,17 @@ class WaterBlockGenerator : public ParticleGenerator<Base>
     virtual void initializeGeometricVariables() override
     {
         // add fluid points
-        for (Real x = 0.5 * dx; x <= LL; x += dx)  // length
+        for (Real x = 0.5 * dx; x <= LL + A_front_y + A_front_z; x += dx)  // length
         {
             for (Real z = 0.5 * dx; z <= LW; z += dx)  // width
             {
                 Real water_height = LH + A_top_x * sin(2.0 * M_PI * (T_top_x * x / LL + S_top_x)) 
-                                        + A_top_z * sin(2.0 * M_PI * (T_top_z * z / LW + S_top_z));
+                                       + A_top_z * sin(2.0 * M_PI * (T_top_z * z / LW + S_top_z));
                 for (Real y = 0.5 * dx; y <= LH + A_top_x + A_top_z; y += dx)  // height
                 {
-                    if (y <= water_height) {
+                    Real water_length = LL + A_front_z * sin(2.0 * M_PI * (T_front_z * z / LW + S_front_z))
+                                           + A_front_y * sin(2.0 * M_PI * (T_front_y * y / LH + S_front_y));
+                    if (y <= water_height && x <= water_length) {
                         Real px = x + distribution(generator);
                         Real py = y + distribution(generator);
                         Real pz = z + distribution(generator);
@@ -76,6 +84,7 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     //  Pass command line arguments to the program
     //  Example run: nohup ./bin/test_3d_dambreak 20.0 0.15 0.15 0.5 1 0 0 ./out_dir_1 42 >> nohup.out 2>&1 &
+    // ./bin/test_3d_dambreak 0.05 0.15 0.15 1 0.5 0 0.75 /home/atoshev/code/sphinxsys_vol/out_dir_3 42 0 0.15 1 0.25 0 0.75
     //----------------------------------------------------------------------
     // Duration of the simulation
     Real end_time = atof(av[1]);  // 20.0
@@ -93,6 +102,17 @@ int main(int ac, char *av[])
     // Seed for additive Gaussian noise to initial positions
     unsigned int seed = atoi(av[9]);  // [42[]
     generator.seed(seed);
+    // Shape parameters
+    A_front_z = atof(av[10]);  // [0.0, 0.15]  - amplitude of the front wave along z
+    A_front_y = atof(av[11]);  // [0.0, 0.15]
+    T_front_z = atof(av[12]);  // [0.25, 2]  - period of the front wave along z
+    T_front_y = atof(av[13]);  // [0.25, 2]
+    S_front_z = atof(av[14]);  // [0.0, 1]  - phase shift of the front wave along z
+    S_front_y = atof(av[15]);  // [0.0, 1]
+    std::cout << std::fixed << std::setprecision(3) << "Shape parameters: "
+              << "\n  A_top_x=" << A_top_x << ", A_top_z=" << A_top_z << ", T_top_x=" << T_top_x << ", T_top_z=" << T_top_z << ", S_top_x=" << S_top_x << ", S_top_z=" << S_top_z 
+              << "\n  A_front_z=" << A_front_z << ", A_front_y=" << A_front_y << ", T_front_z=" << T_front_z << ", T_front_y=" << T_front_y << ", S_front_z=" << S_front_z << ", S_front_y=" << S_front_y
+              << "\n  End time=" << end_time << ", Output folder=" << output_folder_ << ", Seed=" << seed << std::endl;
     //----------------------------------------------------------------------
     //	Build up an SPHSystem.
     //----------------------------------------------------------------------
